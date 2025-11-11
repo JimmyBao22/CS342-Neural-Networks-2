@@ -1,6 +1,7 @@
 import abc
 
 import torch
+import torch.nn as nn
 
 
 def load() -> torch.nn.Module:
@@ -41,7 +42,7 @@ class Autoregressive(abc.ABC):
         """
 
 
-class AutoregressiveModel(torch.nn.Module):
+class AutoregressiveModel(torch.nn.Module, Autoregressive):
     """
     Implement an auto-regressive model.
     The input is a set of patch tokens (integers), the output is an image of probability.
@@ -53,12 +54,43 @@ class AutoregressiveModel(torch.nn.Module):
     Hint: You can complete this homework without using positional embeddings
     """
 
-    def __init__(self, d_latent: int = 128, n_tokens: int = 2**10):
+    def __init__(self, d_latent: int = 128, n_tokens: int = 2**10, n_layers: int = 2, n_head: int = 4):
         super().__init__()
-        raise NotImplementedError()
+        self.d_latent = d_latent
+        self.n_tokens = n_tokens
+
+        self.embedding = nn.Embedding(n_tokens, d_latent)
+        # self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
+        # self.transformer = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
+        self.transformer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
+
+        self.output_layer = nn.Linear(d_latent, n_tokens)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        raise NotImplementedError()
+        B, H, W = x.shape
+        seq_len = H * W
+        flattened = x.view(B, seq_len).to(next(self.parameters()).device)
+        embedded = self.embedding(flattened)
+
+        start_token = torch.zeros(B, 1, self.d_latent, device=embedded.device)
+        x_shifted = torch.cat([start_token, embedded[:, :-1, :]], dim=1)
+
+        mask = torch.nn.Transformer.generate_square_subsequent_mask(seq_len).to(x.device)
+
+        # x_trans = self.transformer(x_shifted, mask=mask)
+        x_trans = self.transformer(x_shifted, src_mask=mask)
+
+        output = self.output_layer(x_trans)
+
+        return output.view(B, H, W, self.n_tokens), {}
 
     def generate(self, B: int = 1, h: int = 30, w: int = 20, device=None) -> torch.Tensor:  # noqa
-        raise NotImplementedError()
+        x = torch.zeros((B, h * w), dtype=torch.long, device=device)
+
+        for i in range(h * w):
+            logits, _ = self.forward(x.view(B, h, w))
+            logits_flattened = logits.view(B, h * w, self.n_tokens)
+            probabilities = torch.softmax(logits_flattened[:, i, :], dim=-1)
+            x[:, i] = torch.multinomial(probabilities, num_samples=1).squeeze(-1)
+    
+        return x.view(B, h, w)
