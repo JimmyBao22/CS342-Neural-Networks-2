@@ -60,25 +60,32 @@ class AutoregressiveModel(torch.nn.Module, Autoregressive):
         self.n_tokens = n_tokens
 
         self.embedding = nn.Embedding(n_tokens, d_latent)
-        # self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
-        # self.transformer = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
-        self.transformer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
+        self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
+        self.transformer = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
+        # self.transformer = nn.TransformerEncoderLayer(d_model=d_latent, nhead=n_head, batch_first=True)
 
         self.output_layer = nn.Linear(d_latent, n_tokens)
+
+        self.pos_embedding = nn.Parameter(torch.randn(1, 600, d_latent))
+        self.start_token = nn.Parameter(torch.randn(1, 1, d_latent))
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         B, H, W = x.shape
         seq_len = H * W
-        flattened = x.view(B, seq_len).to(next(self.parameters()).device)
+        flattened = x.view(B, seq_len)
         embedded = self.embedding(flattened)
 
-        start_token = torch.zeros(B, 1, self.d_latent, device=embedded.device)
-        x_shifted = torch.cat([start_token, embedded[:, :-1, :]], dim=1)
+        pos_embedded = embedded + self.pos_embedding[:, :seq_len, :]
 
-        mask = torch.nn.Transformer.generate_square_subsequent_mask(seq_len).to(x.device)
+        # start_token = torch.zeros(B, 1, self.d_latent, device=x.device)
+        # x_shifted = torch.cat([start_token, embedded[:, :-1, :]], dim=1)
+        start_token = self.start_token.expand(B, -1, -1)
+        x_shifted = torch.cat([start_token, pos_embedded[:, :-1, :]], dim=1)
 
-        # x_trans = self.transformer(x_shifted, mask=mask)
-        x_trans = self.transformer(x_shifted, src_mask=mask)
+        mask = torch.nn.Transformer.generate_square_subsequent_mask(seq_len, device=x.device)
+
+        x_trans = self.transformer(x_shifted, mask=mask)
+        # x_trans = self.transformer(x_shifted, src_mask=mask)
 
         output = self.output_layer(x_trans)
 
