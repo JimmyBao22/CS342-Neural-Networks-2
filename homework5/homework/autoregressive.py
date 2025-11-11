@@ -87,8 +87,8 @@ class AutoregressiveModel(torch.nn.Module, Autoregressive):
 
         mask = torch.nn.Transformer.generate_square_subsequent_mask(seq_len, device=x.device)
 
-        # x_trans = self.transformer(x_shifted, mask=mask)
-        x_trans = self.transformer(x_shifted, src_mask=mask)
+        x_trans = self.transformer(x_shifted, mask=mask)
+        # x_trans = self.transformer(x_shifted, src_mask=mask)
 
         output = self.output_layer(x_trans)
 
