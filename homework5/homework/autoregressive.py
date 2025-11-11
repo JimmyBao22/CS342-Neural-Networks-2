@@ -66,7 +66,8 @@ class AutoregressiveModel(torch.nn.Module, Autoregressive):
 
         self.output_layer = nn.Linear(d_latent, n_tokens)
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, 600, d_latent))
+        # self.pos_embedding = nn.Parameter(torch.randn(1, 600, d_latent))
+        self.pos_embedding = nn.Embedding(600, d_latent)
         self.start_token = nn.Parameter(torch.randn(1, 1, d_latent))
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -75,17 +76,19 @@ class AutoregressiveModel(torch.nn.Module, Autoregressive):
         flattened = x.view(B, seq_len)
         embedded = self.embedding(flattened)
 
-        pos_embedded = embedded + self.pos_embedding[:, :seq_len, :]
+        positions = torch.arange(seq_len, device=x.device).unsqueeze(0)
+        pos_embedded = embedded + self.pos_embedding(positions)
+        # pos_embedded = embedded + self.pos_embedding[:, :seq_len, :]
 
         # start_token = torch.zeros(B, 1, self.d_latent, device=x.device)
-        # x_shifted = torch.cat([start_token, embedded[:, :-1, :]], dim=1)
         start_token = self.start_token.expand(B, -1, -1)
+        # x_shifted = torch.cat([start_token, embedded[:, :-1, :]], dim=1)
         x_shifted = torch.cat([start_token, pos_embedded[:, :-1, :]], dim=1)
 
         mask = torch.nn.Transformer.generate_square_subsequent_mask(seq_len, device=x.device)
 
-        x_trans = self.transformer(x_shifted, mask=mask)
-        # x_trans = self.transformer(x_shifted, src_mask=mask)
+        # x_trans = self.transformer(x_shifted, mask=mask)
+        x_trans = self.transformer(x_shifted, src_mask=mask)
 
         output = self.output_layer(x_trans)
 
