@@ -52,8 +52,18 @@ class BaseLLM:
         - decode the outputs with self.tokenizer.decode
 
         """
-        raise NotImplementedError()
-        # return self.batched_generate([prompt])[0]   # If you feel confident, just use this line of code and move straight to batched_generate.
+        # result = self.format_prompt(prompt)
+        # self.tokenizer.padding_side = "left"
+        # tokenized = self.tokenizer(result, padding=True, return_tensors="pt").to(self.device)
+        # output = self.model.generate(
+        #     **tokenized, 
+        #     max_new_tokens=50,
+        #     do_sample=False,
+        #     temperature=0.0,
+        #     eos_token_id=self.tokenizer.eos_token_id
+        # )
+        # return self.tokenizer.decode(output)
+        return self.batched_generate([prompt])[0]   # If you feel confident, just use this line of code and move straight to batched_generate.
 
     @overload
     def batched_generate(
@@ -127,7 +137,39 @@ class BaseLLM:
                 )
             ]
 
-        raise NotImplementedError()
+        formatted_prompts = [self.format_prompt(p) for p in prompts]
+
+        self.tokenizer.padding_side = "left"
+        inputs = self.tokenizer(
+            formatted_prompts,
+            padding=True,
+            return_tensors="pt",
+        ).to(self.device)
+
+        do_sample = temperature > 0
+        num_return_sequences = num_return_sequences or 1
+        outputs = self.model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=50, 
+            do_sample=do_sample, 
+            temperature=temperature, 
+            num_return_sequences=num_return_sequences, 
+            eos_token_id=self.tokenizer.eos_token_id
+        )
+        
+        input_len = inputs["input_ids"].shape[1]
+        generated_tokens = outputs[:, input_len:]  # exclude input in output
+        
+        decoded = self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+
+        if num_return_sequences and num_return_sequences > 1:
+            return [
+                decoded[i * num_return_sequences: (i + 1) * num_return_sequences]
+                for i in range(len(prompts))
+            ]
+        else:
+            return decoded
 
     def answer(self, *questions) -> list[float]:
         """
