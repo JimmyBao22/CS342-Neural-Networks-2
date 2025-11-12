@@ -9,7 +9,6 @@ def generate_dataset(output_json: str = "data/rft.json", oversample: int = 10, t
     model = CoTModel("HuggingFaceTB/SmolLM2-1.7B-Instruct")
     data = Dataset("train")
     result = []
-    iter = 0
 
     # max_prompts_per_batch = 16
     # questions = [q for q, _ in data]
