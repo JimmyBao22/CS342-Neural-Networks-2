@@ -34,6 +34,8 @@ def generate_dataset(output_json: str, oversample: int = 10, temperature: float 
     with open(output_json, "w") as f:
         json.dump(result, f, indent=2)
 
+    print("Saved files in datagen")
+
 
 if __name__ == "__main__":
     from fire import Fire
