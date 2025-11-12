@@ -1,5 +1,6 @@
 from .base_llm import BaseLLM
 from .data import Dataset, benchmark
+import torch
 
 
 class SFTModel(BaseLLM):
@@ -8,7 +9,7 @@ class SFTModel(BaseLLM):
         SFT models are trained on raw questions without chat templates.
         Return the question as-is.
         """
-        raise NotImplementedError()
+        return question
 
 
 def load() -> SFTModel:
@@ -58,7 +59,17 @@ def format_example(prompt: str, answer: str) -> dict[str, str]:
     """
     Construct a question / answer pair. Consider rounding the answer to make it easier for the LLM.
     """
-    raise NotImplementedError()
+    # raise NotImplementedError()
+    try:
+        numeric_answer = float(answer)
+        answer_str = str(round(numeric_answer, 2))  # round to 2 decimal places if numeric
+    except ValueError:
+        answer_str = answer.strip()
+    
+    return {
+        "question": prompt,
+        "answer": f"<answer>{answer_str}</answer>"
+    }
 
 
 class TokenizedDataset:
@@ -87,7 +98,46 @@ def train_model(
     output_dir: str = "./homework/sft_model",
     **kwargs,
 ):
-    raise NotImplementedError()
+    llm = SFTModel()
+
+    from peft import get_peft_model, LoraConfig
+    from transformers import TrainingArguments, Trainer
+    
+    lora_config = LoraConfig(
+        target_modules="all-linear",
+        bias="none",
+        task_type="CAUSAL_LM",
+        r=8,
+        lora_alpha=32
+    )
+
+    llm.model = get_peft_model(llm.model, lora_config)
+    if torch.cuda.is_available():
+        llm.model.enable_input_require_grads()
+    
+    train_data = Dataset("train")
+    tokenized = TokenizedDataset(llm.tokenizer, train_data, format_example)
+
+    training_args = TrainingArguments(
+        gradient_checkpointing=True,
+        learning_rate=1e-3,
+        output_dir=output_dir,
+        logging_dir=output_dir,
+        report_to="tensorboard",
+        num_train_epochs=5,
+        per_device_train_batch_size=32
+    )
+
+    trainer = Trainer(
+        model=llm.model,
+        args=training_args,
+        train_dataset=tokenized,
+        tokenizer=llm.tokenizer,
+    )
+
+    trainer.train()
+    trainer.save_model(output_dir)
+
     test_model(output_dir)
 
 
