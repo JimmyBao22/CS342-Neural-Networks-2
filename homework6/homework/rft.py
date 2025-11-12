@@ -51,7 +51,7 @@ def train_model(
     if torch.cuda.is_available():
         llm.model.enable_input_require_grads()
     
-    train_data = Dataset("train")
+    train_data = Dataset("rft")
     tokenized = TokenizedDataset(llm.tokenizer, train_data, format_example)
 
     training_args = TrainingArguments(
