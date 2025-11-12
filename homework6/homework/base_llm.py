@@ -28,7 +28,8 @@ class BaseLLM:
         This would be a default implementation applies a basic chat template.
         Override this in subclasses for different behavior (e.g., SFT/RFT models should return raw questions).
         """
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        return question
 
     def parse_answer(self, answer: str) -> float:
         """
@@ -152,8 +153,7 @@ class BaseLLM:
             input_ids=inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
             max_new_tokens=50, 
-            do_sample=do_sample, 
-            temperature=temperature, 
+            do_sample=do_sample,
             num_return_sequences=num_return_sequences, 
             eos_token_id=self.tokenizer.eos_token_id
         )
