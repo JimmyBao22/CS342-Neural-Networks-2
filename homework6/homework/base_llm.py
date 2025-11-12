@@ -75,31 +75,31 @@ class BaseLLM:
         - decode the outputs with self.tokenizer.decode
 
         """
-        # prompt = self.format_prompt(prompt)
+        prompt = self.format_prompt(prompt)
 
-        # self.tokenizer.padding_side = "left"
-        # inputs = self.tokenizer(
-        #     prompt,
-        #     padding=True,
-        #     return_tensors="pt",
-        # ).to(self.device)
+        self.tokenizer.padding_side = "left"
+        inputs = self.tokenizer(
+            prompt,
+            padding=True,
+            return_tensors="pt",
+        ).to(self.device)
 
-        # outputs = self.model.generate(
-        #     input_ids=inputs["input_ids"],
-        #     attention_mask=inputs["attention_mask"],
-        #     max_new_tokens=50, 
-        #     num_return_sequences=1, 
-        #     eos_token_id=self.tokenizer.eos_token_id
-        # )
+        outputs = self.model.generate(
+            input_ids=inputs["input_ids"],
+            attention_mask=inputs["attention_mask"],
+            max_new_tokens=20, 
+            num_return_sequences=1,
+            do_sample=False,
+            eos_token_id=self.tokenizer.eos_token_id
+        )
         
-        # input_len = inputs["input_ids"].shape[1]
-        # generated_tokens = outputs[:, input_len:]  # exclude input in output
+        input_len = inputs["input_ids"].shape[1]
+        generated_tokens = outputs[:, input_len:]  # exclude input in output
         
-        # decoded = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        decoded = self.tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
 
-        # return decoded
-        
-        return self.batched_generate([prompt])[0]   # If you feel confident, just use this line of code and move straight to batched_generate.
+        return decoded
+        # return self.batched_generate([prompt])[0]   # If you feel confident, just use this line of code and move straight to batched_generate.
 
     @overload
     def batched_generate(
