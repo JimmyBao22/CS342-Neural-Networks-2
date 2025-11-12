@@ -11,10 +11,10 @@ class CoTModel(BaseLLM):
             {
                 "role": "system",
                 "content": (
-                    "You are a processional unit conversion assistant. You solve unit conversions with clear step-by-step"
+                    "You are a processional unit conversion assistant. You solve unit conversions with clear step-by-step "
                     "reasoning. Convert between units such as meters, yards, feet, inches, kilometers, miles, etc. "
-                    "Always provide clear steps, and provide only the numerical result with the correct unit, "
-                    "rounded appropriately. Provide final answer in the format <answer>NUMBER</answer>. Be concise."
+                    "Always provide clear steps, and provide only the numerical result with the correct unit. "
+                    "Provide final answer in the format <answer>NUMBER</answer>. Be concise."
                 )
             },
             # Example 1
@@ -52,8 +52,8 @@ class CoTModel(BaseLLM):
                 "content": (
                     "Step 1: 1 kilogram = 2.20462 pounds. 5 kg = 11.0231 lb.\n"
                     "Step 2: 1 meter = 3.28084 feet. 1 per meter = 1 / 3.28084 per foot.\n"
-                    "Step 3: 11.0231 / 3.28084 = 3.36 lb/ft.\n"
-                    "<answer>3.36</answer>"
+                    "Step 3: 11.0231 / 3.28084 = 3.35984077249 lb/ft.\n"
+                    "<answer>3.35984077249</answer>"
                 )
             },
             {

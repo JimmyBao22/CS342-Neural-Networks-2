@@ -26,7 +26,7 @@ def generate_dataset(output_json: str, oversample: int = 10, temperature: float 
             if is_answer_valid(parsed_answer, correct_answer):
                 result.append([
                     question,
-                    correct_answer,
+                    float(correct_answer),
                     answer
                 ])
                 break
